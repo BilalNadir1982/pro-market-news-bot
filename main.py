@@ -10,9 +10,10 @@ bot = Bot(token=BOT_TOKEN)
 
 sent = set()
 
-IMPORTANT_KEYWORDS = [
+KEYWORDS = [
     "etf", "fed", "inflation", "rate", "hack",
-    "liquidation", "ban", "crash", "pump", "bitcoin"
+    "liquidation", "crash", "pump", "bitcoin",
+    "blackrock", "sec"
 ]
 
 def send(msg):
@@ -22,13 +23,35 @@ def send(msg):
     except Exception as e:
         print(e)
 
-def is_important(title):
-    t = title.lower()
-    return any(k in t for k in IMPORTANT_KEYWORDS)
+# ---------------- SIMPLE TRANSLATE ----------------
+# (API YOK → basit Türkçe özet sistemi)
 
-# ---------------- MARKET DATA ----------------
+def translate_to_tr(text):
 
-def market_data():
+    text = text.lower()
+
+    replacements = {
+        "bitcoin": "Bitcoin",
+        "ethereum": "Ethereum",
+        "etf": "ETF",
+        "inflation": "enflasyon",
+        "rate": "faiz oranı",
+        "crash": "sert düşüş",
+        "pump": "yükseliş",
+        "hack": "siber saldırı",
+        "market": "piyasa",
+        "approval": "onay",
+        "sec": "ABD Menkul Kıymetler Kurulu"
+    }
+
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+
+    return text.capitalize()
+
+# ---------------- MARKET ----------------
+
+def market():
 
     btc = requests.get(
         "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
@@ -48,24 +71,23 @@ def market_data():
         "https://api.alternative.me/fng/"
     ).json()["data"][0]
 
-    value = fng["value"]
+    value = int(fng["value"])
     mood = fng["value_classification"]
 
-    # basit AI yorum
-    if int(value) > 70:
-        bias = "🟢 BULLISH MARKET"
-    elif int(value) < 30:
-        bias = "🔴 BEARISH MARKET"
+    if value > 70:
+        bias = "🟢 BULLISH"
+    elif value < 30:
+        bias = "🔴 BEARISH"
     else:
-        bias = "🟡 SIDEWAYS / UNCERTAIN"
+        bias = "🟡 SIDEWAYS"
 
     msg = f"""
-📊 PRO MARKET UPDATE
+📊 PRO V2 MARKET
 
 ₿ BTC: ${btc}
 ETH: ${eth}
 
-BTC Dominance: {dominance:.2f}%
+Dominance: {dominance:.2f}%
 
 Fear & Greed: {value} ({mood})
 
@@ -88,15 +110,21 @@ def news():
         if title in sent:
             continue
 
-        if not is_important(title):
+        if not any(k in title.lower() for k in KEYWORDS):
             continue
 
         sent.add(title)
 
-        msg = f"""
-🚨 IMPORTANT CRYPTO NEWS
+        tr = translate_to_tr(title)
 
-📰 {title}
+        msg = f"""
+🚨 CRYPTO NEWS
+
+🇬🇧 EN:
+{title}
+
+🇹🇷 TR:
+{tr}
 
 🔗 {link}
 """
@@ -106,5 +134,5 @@ def news():
 # ---------------- MAIN ----------------
 
 if __name__ == "__main__":
-    market_data()
+    market()
     news()
