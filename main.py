@@ -13,7 +13,7 @@ sent = set()
 KEYWORDS = [
     "etf", "fed", "inflation", "rate", "hack",
     "liquidation", "crash", "pump", "bitcoin",
-    "blackrock", "sec"
+    "blackrock", "sec", "lawsuit"
 ]
 
 def send(msg):
@@ -23,33 +23,36 @@ def send(msg):
     except Exception as e:
         print(e)
 
-# ---------------- SIMPLE TRANSLATE ----------------
-# (API YOK → basit Türkçe özet sistemi)
+# ---------------- TURKISH SUMMARY ----------------
 
 def translate_to_tr(text):
 
-    text = text.lower()
+    t = text.lower()
 
-    replacements = {
-        "bitcoin": "Bitcoin",
-        "ethereum": "Ethereum",
-        "etf": "ETF",
-        "inflation": "enflasyon",
-        "rate": "faiz oranı",
-        "crash": "sert düşüş",
-        "pump": "yükseliş",
-        "hack": "siber saldırı",
-        "market": "piyasa",
-        "approval": "onay",
-        "sec": "ABD Menkul Kıymetler Kurulu"
-    }
+    if "lawsuit" in t or "lawsuits" in t:
+        return "Şirket hakkında açılan davalar, geleceği konusunda belirsizlik oluşturuyor."
 
-    for k, v in replacements.items():
-        text = text.replace(k, v)
+    if "etf" in t and "bitcoin" in t:
+        return "Bitcoin ETF gelişmeleri piyasada belirsizlik ve hareketlilik yaratıyor."
 
-    return text.capitalize()
+    if "fed" in t or "interest rate" in t or "rate" in t:
+        return "FED faiz kararları kripto ve finans piyasalarını etkiliyor."
 
-# ---------------- MARKET ----------------
+    if "hack" in t:
+        return "Kripto piyasasında siber saldırı endişesi oluştu."
+
+    if "crash" in t:
+        return "Piyasada sert düşüş ve panik satış riski oluştu."
+
+    if "pump" in t:
+        return "Piyasada güçlü yükseliş hareketi görülüyor."
+
+    if "bitcoin" in t:
+        return "Bitcoin ile ilgili önemli piyasa gelişmesi yaşanıyor."
+
+    return "Kripto piyasasında önemli bir gelişme yaşandı."
+
+# ---------------- MARKET DATA ----------------
 
 def market():
 
@@ -75,19 +78,19 @@ def market():
     mood = fng["value_classification"]
 
     if value > 70:
-        bias = "🟢 BULLISH"
+        bias = "🟢 BULLISH MARKET"
     elif value < 30:
-        bias = "🔴 BEARISH"
+        bias = "🔴 BEARISH MARKET"
     else:
-        bias = "🟡 SIDEWAYS"
+        bias = "🟡 SIDEWAYS MARKET"
 
     msg = f"""
-📊 PRO V2 MARKET
+📊 PRO V2 MARKET UPDATE
 
 ₿ BTC: ${btc}
 ETH: ${eth}
 
-Dominance: {dominance:.2f}%
+BTC Dominance: {dominance:.2f}%
 
 Fear & Greed: {value} ({mood})
 
