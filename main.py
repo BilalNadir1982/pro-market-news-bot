@@ -1,9 +1,10 @@
 import os
-import time
 import json
+import time
 import requests
 import feedparser
 from telegram import Bot
+from deep_translator import GoogleTranslator
 
 # =========================================
 # TELEGRAM
@@ -14,25 +15,25 @@ CHAT_ID = os.getenv("CHAT_ID")
 bot = Bot(token=BOT_TOKEN)
 
 # =========================================
-# MEMORY
+# MEMORY FILE
 # =========================================
 NEWS_FILE = "sent_news.json"
 
 def load_news():
     try:
-        with open(NEWS_FILE, "r") as f:
+        with open(NEWS_FILE, "r", encoding="utf-8") as f:
             return set(json.load(f))
     except:
         return set()
 
 def save_news(news_set):
-    with open(NEWS_FILE, "w") as f:
+    with open(NEWS_FILE, "w", encoding="utf-8") as f:
         json.dump(list(news_set), f)
 
 sent_news = load_news()
 
 # =========================================
-# SEND
+# SEND TELEGRAM
 # =========================================
 def send(msg):
 
@@ -47,45 +48,79 @@ def send(msg):
 # RSS SOURCES
 # =========================================
 RSS_FEEDS = [
+
+    # ================= CRYPTO =================
     "https://cointelegraph.com/rss",
     "https://cryptoslate.com/feed/",
-    "https://www.coindesk.com/arc/outboundfeeds/rss/"
+    "https://www.coindesk.com/arc/outboundfeeds/rss/",
+    "https://bitcoinmagazine.com/.rss/full/",
+    "https://u.today/rss",
+
+    # ================= FOREX =================
+    "https://www.fxstreet.com/rss/news",
+    "https://www.forexlive.com/feed/",
+    "https://www.dailyfx.com/feeds/market-news",
+
+    # ================= COMMODITIES =================
+    "https://www.kitco.com/rss/news",
+    "https://oilprice.com/rss/main",
+
+    # ================= TURKISH MARKET =================
+    "https://www.dunya.com/rss",
+    "https://www.bloomberght.com/rss",
+    "https://www.paraanaliz.com/feed/",
+    "https://www.ekonomim.com/rss"
 ]
 
 # =========================================
 # KEYWORDS
 # =========================================
 KEYWORDS = [
+
+    # CRYPTO
     "bitcoin",
+    "btc",
     "ethereum",
-    "etf",
-    "fed",
-    "sec",
-    "binance",
-    "blackrock",
+    "eth",
     "solana",
     "xrp",
     "dogecoin",
+    "binance",
+    "etf",
+    "sec",
     "whale",
-    "hack",
-    "lawsuit",
-    "approval",
+    "liquidation",
     "bullish",
     "bearish",
-    "crash",
-    "pump",
-    "liquidation",
+    "crypto",
+
+    # FOREX
+    "usd",
+    "eur",
+    "dollar",
+    "fed",
     "interest rate",
-    "inflation"
+    "ecb",
+    "forex",
+
+    # COMMODITIES
+    "gold",
+    "silver",
+    "oil",
+    "brent",
+    "natural gas",
+
+    # TURKEY
+    "tcmb",
+    "faiz",
+    "enflasyon",
+    "borsa",
+    "dolar",
+    "altın"
 ]
 
 # =========================================
-# TURKISH SUMMARY
-# =========================================
-from deep_translator import GoogleTranslator
-
-# =========================================
-# REAL TURKISH TRANSLATION
+# REAL TRANSLATION
 # =========================================
 def translate_to_tr(text):
 
@@ -115,14 +150,14 @@ def is_similar(title):
 
         old = old.lower()
 
-        same = 0
+        same_words = 0
 
         for word in title.split():
 
             if word in old:
-                same += 1
+                same_words += 1
 
-        if same >= 5:
+        if same_words >= 5:
             return True
 
     return False
@@ -134,7 +169,9 @@ def fear_greed():
 
     try:
 
-        r = requests.get("https://api.alternative.me/fng/").json()
+        r = requests.get(
+            "https://api.alternative.me/fng/"
+        ).json()
 
         value = int(r["data"][0]["value"])
         label = r["data"][0]["value_classification"]
@@ -157,11 +194,8 @@ def fear_greed():
 
         send(msg)
 
-        return value
-
     except Exception as e:
         print(e)
-        return 50
 
 # =========================================
 # BTC DOMINANCE
@@ -181,7 +215,7 @@ def btc_dominance():
 
 ₿ BTC Dominance: {round(dom,2)}%
 
-{"📈 BTC market güçlü" if dom > 60 else "🚀 Altcoin hareketleri güçlenebilir"}
+{"📈 BTC market dominance güçlü" if dom > 60 else "🚀 Altcoin market güçleniyor"}
 """
 
         send(msg)
@@ -192,7 +226,7 @@ def btc_dominance():
 # =========================================
 # AI MARKET BIAS
 # =========================================
-def ai_bias(fng):
+def ai_bias():
 
     try:
 
@@ -202,10 +236,10 @@ def ai_bias(fng):
 
         change = btc["usd_24h_change"]
 
-        if change > 3 and fng > 60:
+        if change > 3:
             bias = "🟢 STRONG BULLISH"
 
-        elif change < -3 and fng < 40:
+        elif change < -3:
             bias = "🔴 STRONG BEARISH"
 
         else:
@@ -224,11 +258,32 @@ def ai_bias(fng):
         print(e)
 
 # =========================================
+# CATEGORY DETECT
+# =========================================
+def category(title):
+
+    t = title.lower()
+
+    if any(x in t for x in ["bitcoin", "ethereum", "crypto", "xrp", "solana", "binance"]):
+        return "🪙 CRYPTO NEWS"
+
+    elif any(x in t for x in ["usd", "eur", "fed", "ecb", "forex"]):
+        return "💱 FOREX NEWS"
+
+    elif any(x in t for x in ["gold", "silver", "oil", "brent", "gas"]):
+        return "🛢 COMMODITY NEWS"
+
+    elif any(x in t for x in ["tcmb", "faiz", "enflasyon", "borsa", "dolar"]):
+        return "🇹🇷 TURKEY MARKET"
+
+    return "🌍 GLOBAL MARKET"
+
+# =========================================
 # NEWS ENGINE
 # =========================================
 def get_news():
 
-    count = 0
+    sent_count = 0
 
     for url in RSS_FEEDS:
 
@@ -236,7 +291,7 @@ def get_news():
 
             feed = feedparser.parse(url)
 
-            for entry in feed.entries[:15]:
+            for entry in feed.entries[:20]:
 
                 title = entry.title.strip()
                 link = entry.link
@@ -247,7 +302,7 @@ def get_news():
                 if not any(k in low for k in KEYWORDS):
                     continue
 
-                # duplicate
+                # exact duplicate
                 if title in sent_news:
                     continue
 
@@ -255,13 +310,18 @@ def get_news():
                 if is_similar(title):
                     continue
 
+                # save memory
                 sent_news.add(title)
                 save_news(sent_news)
 
+                # translate
                 tr = translate_to_tr(title)
 
+                # category
+                cat = category(title)
+
                 msg = f"""
-🚨 PRO MARKET NEWS
+{cat}
 
 🇬🇧 EN:
 {title}
@@ -274,51 +334,50 @@ def get_news():
 
                 send(msg)
 
-                count += 1
+                sent_count += 1
 
-                time.sleep(2)
+                time.sleep(3)
 
-                if count >= 5:
+                # spam koruma
+                if sent_count >= 8:
                     return
 
         except Exception as e:
             print(e)
 
 # =========================================
-# START
+# START MESSAGE
 # =========================================
-send("🚀 PRO AI MARKET SYSTEM STARTED")
+send("🚀 PRO GLOBAL MARKET BOT STARTED")
 
 # =========================================
-# LOOP
+# MAIN LOOP
 # =========================================
 while True:
 
     try:
 
-        # FEAR & GREED
-        fng = fear_greed()
+        # MARKET DATA
+        fear_greed()
 
         time.sleep(3)
 
-        # BTC DOMINANCE
         btc_dominance()
 
         time.sleep(3)
 
-        # AI BIAS
-        ai_bias(fng)
+        ai_bias()
 
         time.sleep(3)
 
         # NEWS
         get_news()
 
-        # 15 dakika bekle
+        # 15 dakika
         time.sleep(900)
 
     except Exception as e:
 
-        print(e)
+        print("MAIN ERROR:", e)
 
         time.sleep(60)
