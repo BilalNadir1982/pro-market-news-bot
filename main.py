@@ -122,23 +122,30 @@ KEYWORDS = [
 # =========================================
 # REAL TRANSLATION
 # =========================================
+from deep_translator import GoogleTranslator
+
 def translate_to_tr(text):
 
     try:
+        raw = GoogleTranslator(source="auto", target="tr").translate(text)
 
-        translated = GoogleTranslator(
-            source="auto",
-            target="tr"
-        ).translate(text)
+        t = raw.lower()
 
-        return translated
+        # ================= FIX LAYER =================
+
+        t = t.replace("köprü korkuları", "DeFi köprü güvenliği endişeleri")
+        t = t.replace("yatırım tröstleri", "yatırım fonları")
+        t = t.replace("rapor", "raporuna göre")
+        t = t.replace("bitcoin taşır", "Bitcoin transfer ediyor")
+
+        # daha doğal finans dili düzeltmeleri
+        t = t.replace("kripto yatırım ortaklıkları", "kripto yatırım fonları")
+
+        return t.capitalize()
 
     except Exception as e:
-
-        print("TRANSLATE ERROR:", e)
-
-        return "Türkçe çeviri alınamadı."
-
+        print(e)
+        return "Çeviri alınamadı"
 # =========================================
 # DUPLICATE FILTER
 # =========================================
