@@ -1,21 +1,39 @@
 import os
+import json
+import time
 import requests
 import feedparser
 from telegram import Bot
 
+# =========================
+# TELEGRAM
+# =========================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 bot = Bot(token=BOT_TOKEN)
 
-sent = set()
+# =========================
+# NEWS MEMORY FILE
+# =========================
+NEWS_FILE = "sent_news.json"
 
-KEYWORDS = [
-    "etf", "fed", "inflation", "rate", "hack",
-    "liquidation", "crash", "pump", "bitcoin",
-    "blackrock", "sec", "lawsuit"
-]
+def load_news():
+    try:
+        with open(NEWS_FILE, "r") as f:
+            return set(json.load(f))
+    except:
+        return set()
 
+def save_news(news_set):
+    with open(NEWS_FILE, "w") as f:
+        json.dump(list(news_set), f)
+
+sent_news = load_news()
+
+# =========================
+# SEND TELEGRAM
+# =========================
 def send(msg):
     try:
         bot.send_message(chat_id=CHAT_ID, text=msg)
@@ -23,105 +41,154 @@ def send(msg):
     except Exception as e:
         print(e)
 
-# ---------------- TURKISH SUMMARY ----------------
+# =========================
+# IMPORTANT FILTERS
+# =========================
+KEYWORDS = [
+    "bitcoin",
+    "ethereum",
+    "etf",
+    "fed",
+    "sec",
+    "binance",
+    "blackrock",
+    "solana",
+    "xrp",
+    "dogecoin",
+    "hack",
+    "lawsuit",
+    "approval",
+    "bullish",
+    "bearish",
+    "crash",
+    "pump",
+    "whale",
+    "liquidation",
+    "interest rate",
+    "inflation"
+]
 
+# =========================
+# SIMPLE TURKISH SUMMARY
+# =========================
 def translate_to_tr(text):
 
     t = text.lower()
 
-    if "lawsuit" in t or "lawsuits" in t:
-        return "Şirket hakkında açılan davalar, geleceği konusunda belirsizlik oluşturuyor."
+    if "lawsuit" in t:
+        return "Şirket veya proje hakkında dava kaynaklı önemli gelişme yaşanıyor."
 
-    if "etf" in t and "bitcoin" in t:
-        return "Bitcoin ETF gelişmeleri piyasada belirsizlik ve hareketlilik yaratıyor."
+    elif "etf" in t:
+        return "ETF ile ilgili gelişme piyasada hareketlilik oluşturuyor."
 
-    if "fed" in t or "interest rate" in t or "rate" in t:
-        return "FED faiz kararları kripto ve finans piyasalarını etkiliyor."
+    elif "hack" in t:
+        return "Kripto piyasasında güvenlik ve siber saldırı endişesi oluştu."
 
-    if "hack" in t:
-        return "Kripto piyasasında siber saldırı endişesi oluştu."
+    elif "fed" in t or "interest rate" in t:
+        return "FED faiz politikaları piyasayı etkileyebilecek durumda."
 
-    if "crash" in t:
-        return "Piyasada sert düşüş ve panik satış riski oluştu."
+    elif "bullish" in t:
+        return "Piyasada yükseliş beklentisi güçleniyor."
 
-    if "pump" in t:
-        return "Piyasada güçlü yükseliş hareketi görülüyor."
+    elif "bearish" in t:
+        return "Piyasada düşüş baskısı dikkat çekiyor."
 
-    if "bitcoin" in t:
-        return "Bitcoin ile ilgili önemli piyasa gelişmesi yaşanıyor."
+    elif "bitcoin" in t:
+        return "Bitcoin ile ilgili önemli bir piyasa gelişmesi yaşanıyor."
+
+    elif "ethereum" in t:
+        return "Ethereum tarafında önemli bir gelişme gündemde."
+
+    elif "solana" in t:
+        return "Solana ekosistemiyle ilgili dikkat çeken haber yayımlandı."
+
+    elif "xrp" in t:
+        return "XRP ile ilgili önemli bir gelişme yaşanıyor."
+
+    elif "binance" in t:
+        return "Binance ile ilgili piyasayı etkileyebilecek haber geldi."
+
+    elif "whale" in t:
+        return "Balina hareketleri piyasada dikkat çekiyor."
+
+    elif "liquidation" in t:
+        return "Piyasada yüksek miktarda likidasyon gerçekleşiyor."
 
     return "Kripto piyasasında önemli bir gelişme yaşandı."
 
-# ---------------- MARKET DATA ----------------
+# =========================
+# RSS SOURCES
+# =========================
+RSS_FEEDS = [
+    "https://cointelegraph.com/rss",
+    "https://cryptoslate.com/feed/",
+    "https://www.coindesk.com/arc/outboundfeeds/rss/"
+]
 
-def market():
+# =========================
+# DUPLICATE CHECK
+# =========================
+def is_similar(title):
 
-    btc = requests.get(
-        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-    ).json()["bitcoin"]["usd"]
+    title = title.lower()
 
-    eth = requests.get(
-        "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
-    ).json()["ethereum"]["usd"]
+    for old in sent_news:
 
-    global_data = requests.get(
-        "https://api.coingecko.com/api/v3/global"
-    ).json()["data"]
+        old = old.lower()
 
-    dominance = global_data["market_cap_percentage"]["btc"]
+        # benzerlik kontrolü
+        same_words = 0
 
-    fng = requests.get(
-        "https://api.alternative.me/fng/"
-    ).json()["data"][0]
+        for word in title.split():
 
-    value = int(fng["value"])
-    mood = fng["value_classification"]
+            if word in old:
+                same_words += 1
 
-    if value > 70:
-        bias = "🟢 BULLISH MARKET"
-    elif value < 30:
-        bias = "🔴 BEARISH MARKET"
-    else:
-        bias = "🟡 SIDEWAYS MARKET"
+        if same_words >= 5:
+            return True
 
-    msg = f"""
-📊 PRO V2 MARKET UPDATE
+    return False
 
-₿ BTC: ${btc}
-ETH: ${eth}
+# =========================
+# NEWS ENGINE
+# =========================
+def get_news():
 
-BTC Dominance: {dominance:.2f}%
+    new_count = 0
 
-Fear & Greed: {value} ({mood})
+    for feed_url in RSS_FEEDS:
 
-⚡ Bias: {bias}
-"""
+        try:
 
-    send(msg)
+            feed = feedparser.parse(feed_url)
 
-# ---------------- NEWS ----------------
+            for entry in feed.entries[:15]:
 
-def news():
+                title = entry.title.strip()
+                link = entry.link
 
-    feed = feedparser.parse("https://cointelegraph.com/rss")
+                low = title.lower()
 
-    for entry in feed.entries[:10]:
+                # keyword filter
+                if not any(k in low for k in KEYWORDS):
+                    continue
 
-        title = entry.title
-        link = entry.link
+                # exact duplicate
+                if title in sent_news:
+                    continue
 
-        if title in sent:
-            continue
+                # similar duplicate
+                if is_similar(title):
+                    continue
 
-        if not any(k in title.lower() for k in KEYWORDS):
-            continue
+                # save memory
+                sent_news.add(title)
+                save_news(sent_news)
 
-        sent.add(title)
+                tr = translate_to_tr(title)
 
-        tr = translate_to_tr(title)
-
-        msg = f"""
-🚨 CRYPTO NEWS
+                msg = f"""
+🚨 KRIPTO HABER
 
 🇬🇧 EN:
 {title}
@@ -132,10 +199,38 @@ def news():
 🔗 {link}
 """
 
-        send(msg)
+                send(msg)
 
-# ---------------- MAIN ----------------
+                new_count += 1
 
-if __name__ == "__main__":
-    market()
-    news()
+                time.sleep(3)
+
+                # spam koruması
+                if new_count >= 5:
+                    return
+
+        except Exception as e:
+            print(e)
+
+# =========================
+# START
+# =========================
+send("🚀 PRO NEWS BOT STARTED")
+
+# =========================
+# LOOP
+# =========================
+while True:
+
+    try:
+
+        get_news()
+
+        # 15 dakika
+        time.sleep(900)
+
+    except Exception as e:
+
+        print(e)
+
+        time.sleep(60)
