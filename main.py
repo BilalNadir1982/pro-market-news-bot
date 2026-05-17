@@ -127,24 +127,47 @@ from deep_translator import GoogleTranslator
 def translate_to_tr(text):
 
     try:
+        # 1) HAM ÇEVİRİ
         raw = GoogleTranslator(source="auto", target="tr").translate(text)
 
         t = raw.lower()
 
-        # ================= FIX LAYER =================
+        # =========================================
+        # 🧠 FINANS DİLİ DÜZELTME KATMANI
+        # =========================================
 
-        t = t.replace("köprü korkuları", "DeFi köprü güvenliği endişeleri")
-        t = t.replace("yatırım tröstleri", "yatırım fonları")
-        t = t.replace("rapor", "raporuna göre")
-        t = t.replace("bitcoin taşır", "Bitcoin transfer ediyor")
+        fixes = {
 
-        # daha doğal finans dili düzeltmeleri
-        t = t.replace("kripto yatırım ortaklıkları", "kripto yatırım fonları")
+            # crypto finance terms
+            "köprü korkuları": "DeFi köprü güvenliği endişeleri",
+            "yatırım tröstleri": "kurumsal yatırım fonları",
+            "rapor": "raporuna göre",
+            "bildirildi": "bildirildiğine göre",
+            "taşıyor": "transfer ediyor",
+            "hareket ettiriyor": "transfer ediyor",
 
-        return t.capitalize()
+            # market meaning fixes
+            "bitcoin tarafında önemli gelişmeler": "Bitcoin piyasasında önemli bir gelişme yaşandı",
+            "kripto para piyasasında önemli gelişme": "kripto para piyasasında dikkat çeken bir gelişme yaşandı",
+
+            # DeFi fix
+            "defi": "DeFi (merkeziyetsiz finans)",
+
+        }
+
+        for k, v in fixes.items():
+            t = t.replace(k, v)
+
+        # =========================================
+        # 🧠 DAHA DOĞAL YAZIM
+        # =========================================
+        t = t.strip()
+        t = t[0].upper() + t[1:] if len(t) > 1 else t
+
+        return t
 
     except Exception as e:
-        print(e)
+        print("TRANSLATE ERROR:", e)
         return "Çeviri alınamadı"
 # =========================================
 # DUPLICATE FILTER
@@ -328,13 +351,13 @@ def get_news():
                 cat = category(title)
 
                 msg = f"""
-{cat}
+🚨 {cat}
 
-🇬🇧 EN:
-{title}
-
-🇹🇷 TR:
+📌 ÖZET:
 {tr}
+
+🌍 ORİJİNAL:
+{title}
 
 🔗 {link}
 """
