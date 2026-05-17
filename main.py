@@ -82,35 +82,27 @@ KEYWORDS = [
 # =========================================
 # TURKISH SUMMARY
 # =========================================
+from deep_translator import GoogleTranslator
+
+# =========================================
+# REAL TURKISH TRANSLATION
+# =========================================
 def translate_to_tr(text):
 
-    t = text.lower()
+    try:
 
-    if "hack" in t:
-        return "Kripto piyasasında siber saldırı endişesi oluştu."
+        translated = GoogleTranslator(
+            source="auto",
+            target="tr"
+        ).translate(text)
 
-    elif "etf" in t:
-        return "ETF gelişmeleri piyasada büyük hareketlilik oluşturuyor."
+        return translated
 
-    elif "fed" in t or "interest rate" in t:
-        return "FED faiz politikaları piyasaları etkiliyor."
+    except Exception as e:
 
-    elif "whale" in t:
-        return "Balina hareketleri piyasada dikkat çekiyor."
+        print("TRANSLATE ERROR:", e)
 
-    elif "bullish" in t:
-        return "Piyasada yükseliş beklentisi güçleniyor."
-
-    elif "bearish" in t:
-        return "Piyasada düşüş baskısı artıyor."
-
-    elif "liquidation" in t:
-        return "Piyasada büyük likidasyon hareketi yaşanıyor."
-
-    elif "bitcoin" in t:
-        return "Bitcoin tarafında önemli gelişmeler yaşanıyor."
-
-    return "Kripto piyasasında önemli bir gelişme yaşandı."
+        return "Türkçe çeviri alınamadı."
 
 # =========================================
 # DUPLICATE FILTER
